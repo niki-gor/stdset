@@ -157,19 +157,22 @@ void Set<T, Comparator>::splitChild(Set::Node* x, size_t i) {
 
 template<class T, class Comparator>
 Set<T, Comparator>::~Set() {
-    std::cerr << root << '\n';
     delete root;
 }
 
-//template<class T, class Comparator>
-//Set<T, Comparator>& Set<T, Comparator>::operator=(Set other) {
-//    delete root;
-//    list = {};
-//    for (auto elem : other) {
-//        insert(elem);
-//    }
-//    return *this;
-//}
+template<class T, class Comparator>
+Set<T, Comparator>& Set<T, Comparator>::operator=(const Set& other) {
+    if (this == &other) {
+        return *this;
+    }
+    delete root;
+    root = nullptr;
+    list = {};
+    for (auto elem : other) {
+        insert(elem);
+    }
+    return *this;
+}
 
 
 template<class T, class Comparator>

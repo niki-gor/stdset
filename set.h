@@ -20,7 +20,7 @@ public:
 
     Set(const Set& other);
 
-//    Set& operator=(Set other);
+    Set& operator=(const Set& other);
 
     ~Set();
 
