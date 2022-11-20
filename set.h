@@ -1,124 +1,67 @@
+#pragma once
+
+
 #include <algorithm>
 #include <vector>
 #include <list>
 
-// некоторые библиотеки структур данных поставляются как single-header файлы — я решил не отступать от традиции
-template<typename T, class Comparator = std::less<T>>
+
+template<class T, class Comparator = std::less<T>>
 class Set {
 public:
-    using iterator = typename std::list<T>::iterator;
+    using iterator = typename std::list<T>::const_iterator;
 
-    explicit Set() : root(nullptr) {
-    }
+    Set();
 
-    ~Set() {
-        delete root;
-    }
+    template<class I>
+    requires std::forward_iterator<I> Set(I begin, I end);
 
-    void insert(const T& key) {
-        if (!root) {
-            root = new Node(true);
-            list.push_back(key);
-            root->iters.push_back(list.begin());
-            return;
-        }
+    Set(std::initializer_list<T> initList);
 
-        if (full(root)) {
-            Node* tmp = new Node(false);
-            tmp->children.push_back(root);
-            root = tmp;
-            splitChild(root, 0);
-        }
+    Set(const Set& other);
 
-        insertNonFull(root, key);
-    }
+//    Set& operator=(Set other);
 
-    iterator begin() {
-        return list.begin();
-    }
+    ~Set();
 
-    iterator end() {
-        return list.end();
-    }
+    iterator lower_bound(const T& key) const;
 
-    [[nodiscard]] size_t size() const {
-        return list.size();
-    }
+    iterator find(const T& key) const;
 
-    [[nodiscard]] bool empty() const {
-        return list.empty();
-    }
+    void insert(const T& key);
+
+    iterator begin() const;
+
+    iterator end() const;
+
+    [[nodiscard]] size_t size() const;
+
+    [[nodiscard]] bool empty() const;
 
 private:
     struct Node {
-        explicit Node(bool leaf) : leaf(leaf) {
-        }
+        explicit Node(bool leaf);
 
-        ~Node() {
-            for (Node* child : children) {
-                delete child;
-            }
-        }
+        ~Node();
 
         bool leaf;
         std::vector<iterator> iters;
         std::vector<Node*> children;
     };
 
-    static const size_t t;
+    static constexpr Comparator comp = Comparator();
+    static constexpr size_t t = 25; // значение t должно быть больше 1
     Node* root;
     std::list<T> list;
 
-    std::function<bool(const iterator&)> less(const T& key) {
-        static Comparator comp;
-        return [&](const iterator& iter) {
-            return comp(*iter, key);
-        };
-    }
+    std::function<bool(const iterator&)> less(const T& key) const;
 
-    bool full(Node* node) {
-        return node->iters.size() == 2 * t - 1;
-    }
+    bool full(Node* node) const;
 
-    void insertNonFull(Node* node, const T& key) {
-        while (!node->leaf) {
-            auto before = std::ranges::find_if_not(node->iters, less(key));
-            size_t pos = before - node->iters.begin();
-            if (full(node->children[pos])) {
-                splitChild(node, pos);
-                // после разбиения потомка в текущий узел из него поднялся ключ
-                // надо сравниться и с ним
-                if (less(key)(node->iters[pos])) { // здесь замыкание. "если  *node->iters[pos]  <  key"
-                    ++pos;
-                }
-            }
-            node = node->children[pos];
-        }
-        auto before = std::ranges::find_if_not(node->iters, less(key));
-        if (before == node->iters.end()) {
-            node->iters.insert(before, list.insert(std::next(*std::prev(before)), key));
-        }
-        else {
-            node->iters.insert(before, list.insert(*before, key));
-        }
-    }
+    void insertNonFull(Node* node, const T& key);
 
-    void splitChild(Node* x, size_t i) {
-        // x — parent, y — child, z — new child
-        // описание алгоритма (псевдокод)         https://imgur.com/a/ULdgO3x
-        Node* y = x->children[i];
-        Node* z = new Node(y->leaf);
-        std::copy_n(y->iters.begin() + t, t - 1, std::back_inserter(z->iters));
-
-        if (!y->leaf) {
-            std::copy_n(y->children.begin() + t, t, std::back_inserter(z->children));
-            y->children.resize(t);
-        }
-        x->children.insert(x->children.begin() + i + 1, z);
-        x->iters.insert(x->iters.begin() + i, y->iters[t - 1]);
-        y->iters.resize(t - 1);
-    }
+    void splitChild(Node* x, size_t i);
 };
 
-template<class T, class Comparator>
-const size_t Set<T, Comparator>::t = 25; // значение t должно быть больше 1
+
+#include "set.cpp"
