@@ -3,4 +3,4 @@ project(stdset)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(stdset main.cpp)
+add_executable(stdset test_set.cpp set.h)

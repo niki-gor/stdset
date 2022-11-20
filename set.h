@@ -1,23 +1,17 @@
-#include <iostream>
-#include <vector>
 #include <algorithm>
+#include <vector>
 #include <list>
 
-
+// некоторые библиотеки структур данных поставляются как single-header файлы — я решил не отступать от традиции
 template<typename T, class Comparator = std::less<T>>
-class BTree {
+class Set {
 public:
     using iterator = typename std::list<T>::iterator;
 
-    explicit BTree() : root(nullptr), t(3), less([](const T& key) {
-        static Comparator comp;
-        return [&](const iterator& iter) {
-            return comp(*iter, key);
-        };
-    }) {
+    explicit Set() : root(nullptr) {
     }
 
-    ~BTree() {
+    ~Set() {
         delete root;
     }
 
@@ -47,6 +41,14 @@ public:
         return list.end();
     }
 
+    [[nodiscard]] size_t size() const {
+        return list.size();
+    }
+
+    [[nodiscard]] bool empty() const {
+        return list.empty();
+    }
+
 private:
     struct Node {
         explicit Node(bool leaf) : leaf(leaf) {
@@ -63,10 +65,16 @@ private:
         std::vector<Node*> children;
     };
 
+    static const size_t t;
     Node* root;
-    const size_t t;
-    const std::function<std::function<bool(const iterator&)>(const T&)> less;
     std::list<T> list;
+
+    std::function<bool(const iterator&)> less(const T& key) {
+        static Comparator comp;
+        return [&](const iterator& iter) {
+            return comp(*iter, key);
+        };
+    }
 
     bool full(Node* node) {
         return node->iters.size() == 2 * t - 1;
@@ -74,24 +82,24 @@ private:
 
     void insertNonFull(Node* node, const T& key) {
         while (!node->leaf) {
-            auto insertTo = std::ranges::find_if_not(node->iters, less(key));
-            size_t pos = insertTo - node->iters.begin();
+            auto before = std::ranges::find_if_not(node->iters, less(key));
+            size_t pos = before - node->iters.begin();
             if (full(node->children[pos])) {
                 splitChild(node, pos);
                 // после разбиения потомка в текущий узел из него поднялся ключ
                 // надо сравниться и с ним
-                if (less(key)(node->iters[pos])) { // здесь замыкание. "если *node->iters[pos] < key"
+                if (less(key)(node->iters[pos])) { // здесь замыкание. "если  *node->iters[pos]  <  key"
                     ++pos;
                 }
             }
             node = node->children[pos];
         }
-        auto insertTo = std::ranges::find_if_not(node->iters, less(key));
-        if (insertTo == node->iters.end()) {
-            node->iters.insert(insertTo, list.insert(std::next(*std::prev(insertTo)), key));
+        auto before = std::ranges::find_if_not(node->iters, less(key));
+        if (before == node->iters.end()) {
+            node->iters.insert(before, list.insert(std::next(*std::prev(before)), key));
         }
         else {
-            node->iters.insert(insertTo, list.insert(*insertTo, key));
+            node->iters.insert(before, list.insert(*before, key));
         }
     }
 
@@ -112,40 +120,5 @@ private:
     }
 };
 
-
-void run(std::istream& in, std::ostream& out) {
-    BTree<int> tree;
-    tree.insert(1);
-    tree.insert(324);
-    tree.insert(-7);
-    for (auto& i : tree) {
-        out << i << ' ';
-    }
-    //    size_t t;
-    //    in >> t;
-    //    BTree<int> tree(t);
-    //    for (int x; in >> x; tree.insert(x)) {
-    //    }
-    //
-    //    std::vector<BTree<int>::Node*> level = {tree.root};
-    //    std::vector<BTree<int>::Node*> nextLevel;
-    //    while (!level.empty()) {
-    //        for (auto& node : level) {
-    //            for (auto& key : node->iters) {
-    //                out << key << ' ';
-    //            }
-    //            for (auto& child : node->children) {
-    //                nextLevel.push_back(child);
-    //            }
-    //        }
-    //        out << '\n';
-    //        level.swap(nextLevel);
-    //        nextLevel = {};
-    //    }
-}
-
-
-int main() {
-    run(std::cin, std::cout);
-    return 0;
-}
+template<class T, class Comparator>
+const size_t Set<T, Comparator>::t = 25; // значение t должно быть больше 1
